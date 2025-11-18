@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: concurrency-control
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: control
+        image: quay.io/crc-org/concurrency:v0.1
+        command: ["python3"]     
+        args: ["/opt/src/control.py"] 
+        env:
+        - name: SERVER
+          value: "https://api.gpc.ocp-hub.prod.psi.redhat.com:6443"
+        - name: NAMESPACE
+          value: "devtoolsqe--pipeline"
+        - name: MACHINE_CM
+          value: "machine-status-config"
+        - LABEL_MACHINE_PR:
+          value: "tester"
+        - LAEBL_MACHINE_TASK:
+          value: "builder"
+        - LABEL_TASK:
+          value: "build-installer"
+        volumeMounts:
+        - mountPath: /opt/token
+          name: token
+        volumes:
+        - name: token
+          secret:
+            name: token

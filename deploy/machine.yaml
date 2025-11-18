@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: machine-status-config
+  namespace: devtoolsqe--pipeline
+data:
+  secret-windows-1-brno: free
+  secret-windows-1-blr: free
+  secret-mac-1-brno: free
+  secret-mac-2-brno: free
+  secret-mac-1-blr: free
+  secret-mac-3-brno: free
+  secret-mac-4-brno: free
+  secret-mac-5-brno: free
+  secret-mac-6-brno: free
+  secret-mac-7-brno: free
+  secret-mac-8-brno: free
+  secret-mac-9-brno: free
+  secret-rhel-1-blr: free
+  secret-rhel-1-brno: free
