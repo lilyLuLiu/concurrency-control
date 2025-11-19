@@ -4,13 +4,28 @@ metadata:
   name: concurrency-control
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: concurrency-control
   template:
+    metadata:
+      labels:
+        app: concurrency-control
     spec:
+      serviceAccountName: ci-use
       containers:
       - name: control
         image: quay.io/crc-org/concurrency:v0.1
-        command: ["python3"]     
-        args: ["/opt/src/control.py"] 
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: "250m"      
+            memory: "256Mi"  
+          limits:
+            cpu: "500m"     
+            memory: "512Mi"
+        command: ["python3", "-u"]     
+        args: ["/opt/control.py"] 
         env:
         - name: SERVER
           value: "https://api.gpc.ocp-hub.prod.psi.redhat.com:6443"
@@ -18,16 +33,9 @@ spec:
           value: "devtoolsqe--pipeline"
         - name: MACHINE_CM
           value: "machine-status-config"
-        - LABEL_MACHINE_PR:
+        - name: LABEL_MACHINE_PR
           value: "tester"
-        - LAEBL_MACHINE_TASK:
+        - name: LAEBL_MACHINE_TASK
           value: "builder"
-        - LABEL_TASK:
+        - name: LABEL_TASK
           value: "build-installer"
-        volumeMounts:
-        - mountPath: /opt/token
-          name: token
-        volumes:
-        - name: token
-          secret:
-            name: token

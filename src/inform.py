@@ -1,4 +1,6 @@
 import paramiko
+import runcmd
+import json
 
 def get_machine_secret(secret_name:str):
     cmd = "oc get secret {} -o json | jq '.data |= with_entries(.value |= @base64d)'".format(secret_name)

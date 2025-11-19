@@ -5,39 +5,38 @@ import time
 import inform
 
 NAMESPACE = os.environ.get("NAMESPACE", "devtoolsqe--pipeline")
-TOEKN = os.environ.get("TOKEN")
+TOKEN_PATH = os.environ.get("TOKEN_PATH")
 SERVER = os.environ.get("SERVER", "https://api.gpc.ocp-hub.prod.psi.redhat.com:6443")
 MACHINE_STATUS_CM = os.environ.get("MACHINE_CM", "machine-status-config")
-LABEL_MACHINE_PR = os.environ.get(LABEL_MACHINE_PR, "tester")
-LAEBL_MACHINE_TASK = os.environ.get(LAEBL_MACHINE_TASK, "builder")
-LABEL_TASK = os.environ.get(LABEL_TASK,"")
+LABEL_MACHINE_PR = os.environ.get("LABEL_MACHINE_PR", "tester")
+LAEBL_MACHINE_TASK = os.environ.get("LAEBL_MACHINE_TASK", "builder")
+LABEL_TASK = os.environ.get("LABEL_TASK","")
+
 
 WAIT_FINISH_RUNS = []
 WAIT_TASK_FINISH = []
 
 
-def login():
-    cmd = "oc login --token={} --server={}".format(TOEKN, SERVER)
-    code, out, _ = runcmd.run_cmd(cmd)
+def set_project():
+    cmd = "export KUBECONFIG=/tmp/kubeconfig;oc project {}".format(NAMESPACE)
+    code, out, err = runcmd.run_cmd(cmd)
     if code == 0:
         print(out)
     else:
-        raise Exception("failed to login")
-    cmd = "oc project {}".format(NAMESPACE)
-    code, out, _ = runcmd.run_cmd(cmd)
-    if code == 0:
         print(out)
-    else:
-        raise Exception("can't find project {}".format(NAMESPACE))
+        print(err)
+        raise Exception("can't access to project {}".format(NAMESPACE))
 
 def get_pending_runs():
     cmd = "tkn pipelinerun list | grep Pending"
-    code, out, _ = runcmd.run_cmd(cmd)
+    code, out, err = runcmd.run_cmd(cmd)
     pendings = []
     if code==0 and out != "" :
         lines = out.splitlines()
         pendings = [line.split()[0] for line in lines] 
     else:
+        print(out)
+        print(err)
         print("Not find any pending pipelinerun")
     return pendings
     
@@ -56,7 +55,7 @@ def get_machine_status(machine: str):
         return out.strip()
     else:
         print(f"failed to find {machine} in configmap {MACHINE_STATUS_CM}")
-        return null
+        return None
 
 def change_machine_status(machine: str, status: str):
     patch_body = f'[{{\"op\": \"replace\", \"path\": \"/data/{machine}\", \"value\": \"{status}\"}}]'
@@ -85,9 +84,11 @@ def check_run_finish(run: str):
         raise Exception("failed to get the status of run {}".format(run))
 
 def monitor_runs_finish():
+    print("************** Monitor pipelinerun finish **************")
     new_wait_list = []
     global WAIT_FINISH_RUNS
     for run,machine in WAIT_FINISH_RUNS:
+        print(f"--- {run} ---")
         status = check_run_finish(run)
         if status == True:
             print(f"pipelinerun {run} has finished, set {machine} to free")
@@ -107,34 +108,10 @@ def start_pending_run(run: str):
         raise Exception("failed to start pipelinerun {}".format(run))  
 
 def monitor_pending_run():
+    print("************** Monitor pending run **************")
     pendings = get_pending_runs()
-    '''
     for pend in pendings:
-        machine = get_run_lable(pend,LABEL_MACHINE_PR)
-        status = get_machine_status(machine)
-        if LAEBL_MACHINE_TASK != "":
-            machine2 = get_run_lable(pend,LAEBL_MACHINE_TASK)
-            status2 = get_machine_status(machine2)
-        else:
-            status2 = "free"
-            machine2 = ""
-        
-        if status == "free" and status2 == "free":
-            print("machine {} is avaliable".format(machine))
-            print("start pipelinerun {} to start".format(pend))
-            if LAEBL_MACHINE_TASK != "":
-                print("machine {} is avaliable".format(machine2))
-                change_machine_status(machine2, "busy")
-            change_machine_status(machine, "busy")
-            inform.set_inform_message(machine, pend)
-            start_pending_run(pend)
-            WAIT_FINISH_RUNS.append((pend, machine))
-        elif status == "busy":
-            print("pipelinerun {} still wait machine {}".format(pend, machine))
-        else:
-            print("machine {} status is {}!!!".format(machine, status))
-    '''
-    for pend in pendings:
+        print(f"--- {pend} ---")
         use_second_machine = False
         status2 = "free"
 
@@ -175,7 +152,7 @@ def monitor_pending_run():
                 print(f"machine {machine2} status is {status2} !!!")
 
 def check_task_finish(pipelinerun: str, task_name: str):
-    cmd = "oc get taskrun -l tekton.dev/pipelineRun={} | grep {}".format(pipelineRun, task_name)
+    cmd = "oc get taskrun -l tekton.dev/pipelineRun={} | grep {}".format(pipelinerun, task_name)
     code, out, _ = runcmd.run_cmd(cmd)
     if code==0 and out != "" :
         status = out.split()[1]
@@ -184,13 +161,15 @@ def check_task_finish(pipelinerun: str, task_name: str):
         else:
             return False
     else:
-        print(f"task {task_name} in pipelineRun {pipelineRun} not find")
+        print(f"task {task_name} in pipelineRun {pipelinerun} not find")
         return False
 
-def monitor_task()
+def monitor_task():
+    print("************** Monitor tasks **************")
     new_wait_list = []
     global WAIT_TASK_FINISH
     for run, machine in WAIT_TASK_FINISH:
+        print(f"--- {run} {machine} ---")
         status =  check_task_finish(run, LABEL_TASK)
         if status == True:
             print(f"task {LABEL_TASK} of pipelinerun {run} has finished, set {machine} to free")
@@ -202,12 +181,15 @@ def monitor_task()
     WAIT_TASK_FINISH = new_wait_list
 
 if __name__ == "__main__":
-    login()
+    set_project()
     
     while True:
         monitor_pending_run()
         monitor_runs_finish()
-        if bool(LAEBL_MACHINE_TASK):
-            monitor_task()
-        print("sleep 5 minutes")
-        time.sleep(5*60)
+        monitor_task()           
+        print("\nWAIT_FINISH_RUNS:")
+        print(WAIT_FINISH_RUNS)
+        print("\nWAIT_TASK_FINISH")
+        print(WAIT_TASK_FINISH)
+        print("\n\nsleep 1 minute\n")
+        time.sleep(1*60)
