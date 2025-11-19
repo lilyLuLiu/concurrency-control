@@ -43,7 +43,7 @@ def get_pending_runs():
 def get_run_lable(run_name: str, label_name: str):
     cmd = "oc get pipelinerun {0} -o json | jq -r '.metadata.labels[\"{1}\"]'".format(run_name, label_name)
     code, out, _ = runcmd.run_cmd(cmd)
-    if code==0 and out != "" :
+    if code==0 and out.strip() != "null" :
         return out.strip()
     else:
         return None
@@ -51,7 +51,7 @@ def get_run_lable(run_name: str, label_name: str):
 def get_machine_status(machine: str):
     cmd = "oc get cm {} -o json | jq -r '.data[\"{}\"]'".format(MACHINE_STATUS_CM, machine)
     code, out, _ = runcmd.run_cmd(cmd)
-    if code==0 and out != "" :
+    if code==0 and out.strip() != "null" :
         return out.strip()
     else:
         print(f"failed to find {machine} in configmap {MACHINE_STATUS_CM}")
@@ -84,9 +84,10 @@ def check_run_finish(run: str):
         raise Exception("failed to get the status of run {}".format(run))
 
 def monitor_runs_finish():
-    print("************** Monitor pipelinerun finish **************")
     new_wait_list = []
     global WAIT_FINISH_RUNS
+    if len(WAIT_FINISH_RUNS) > 0:
+        print("************** Monitor pipelinerun finish **************")
     for run,machine in WAIT_FINISH_RUNS:
         print(f"--- {run} ---")
         status = check_run_finish(run)
@@ -108,8 +109,9 @@ def start_pending_run(run: str):
         raise Exception("failed to start pipelinerun {}".format(run))  
 
 def monitor_pending_run():
-    print("************** Monitor pending run **************")
     pendings = get_pending_runs()
+    if len(pendings) > 0:
+        print("************** Monitor pending run **************")
     for pend in pendings:
         print(f"--- {pend} ---")
         use_second_machine = False
@@ -165,9 +167,10 @@ def check_task_finish(pipelinerun: str, task_name: str):
         return False
 
 def monitor_task():
-    print("************** Monitor tasks **************")
     new_wait_list = []
     global WAIT_TASK_FINISH
+    if len(WAIT_TASK_FINISH) > 0:
+        print("************** Monitor tasks **************")
     for run, machine in WAIT_TASK_FINISH:
         print(f"--- {run} {machine} ---")
         status =  check_task_finish(run, LABEL_TASK)
@@ -176,7 +179,7 @@ def monitor_task():
             change_machine_status(machine, "free")
             inform.clean_inform_message(machine)
         else:
-            print(f"task {LABEL_TASK} of pipelinerun {run} is still running, machine {machine} is busy")
+            print(f"task {LABEL_TASK} of pipelinerun {run} is not finish, machine {machine} is busy")
             new_wait_list.append((run, machine))
     WAIT_TASK_FINISH = new_wait_list
 
@@ -184,9 +187,9 @@ if __name__ == "__main__":
     set_project()
     
     while True:
+        monitor_task()
         monitor_pending_run()
-        monitor_runs_finish()
-        monitor_task()           
+        monitor_runs_finish()      
         print("\nWAIT_FINISH_RUNS:")
         print(WAIT_FINISH_RUNS)
         print("\nWAIT_TASK_FINISH")
