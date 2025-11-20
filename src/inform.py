@@ -1,67 +1,92 @@
 import paramiko
 import runcmd
 import json
+import io
 
 def get_machine_secret(secret_name:str):
-    cmd = "oc get secret {} -o json | jq '.data |= with_entries(.value |= @base64d)'".format(secret_name)
-    code, out, _ = runcmd.run_cmd(cmd)
-    if code == 0:
-        data = json.loads(out).get("data", {})
-        return data
-    else:
-       raise Exception("failed to get secret of machine {}".format(secret_name))
+    _, username, _ = runcmd.run_cmd(f"cat /opt/{secret_name}/username")
+    _, host, _ = runcmd.run_cmd(f"cat /opt/{secret_name}/host")
+    keypath = f"/opt/{secret_name}/id_rsa"
+    return host, username, keypath
 
 def set_inform_message(machine:str, piprlinerun: str):
     message = "current machine is occuied by pipelinerun {}\nPlease not modify anything affects testing".format(piprlinerun)
-    data = get_machine_secret(machine)
-    password= data["password"]
-    user = data["username"]
-    host = data["host"]
-    set_remote_motd(host, user, password, message)
+    host, user, keypath = get_machine_secret(machine)
+    if "windows" in machine:
+        os = "windows"
+    else:
+        os = "linux"
+    set_remote_motd(host, user, keypath, message, os)
 
 def clean_inform_message(machine:str):
-    data = get_machine_secret(machine)
-    password= data["password"]
-    user = data["username"]
-    host = data["host"]
-    clear_remote_motd(host, user, password)
+    host, user, keypath = get_machine_secret(machine)
+    if "windows" in machine:
+        os = "windows"
+    else:
+        os = "linux"
+    clear_remote_motd(host, user, keypath, os)
     
-def set_remote_motd(host, user, password, message):
+def set_remote_motd(host, user, keypath, message, os_type='linux'):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(host, username=user, password=password)
+    private_key = paramiko.RSAKey.from_private_key_file(keypath)
+    ssh.connect(host, username=user, pkey=private_key)   
 
-    # red Square 
-    lines = message.splitlines()
-    max_len = max(len(line) for line in lines)
-    border = "#" * (max_len + 6)  # length of Square
+    if os_type.lower() == 'linux':
+        MOTD_FILE_PATH = "/etc/motd"
+        
+        lines = message.splitlines()
+        max_len = max(len(line) for line in lines)
+        border_char = "#"
+        border = border_char * (max_len + 6) 
+        motd_content = border + "\n"
+        for line in lines:
+            colored_line = f"\033[1;31m{line.ljust(max_len)}\033[0m"
+            motd_content += f"{border_char}  {colored_line}  {border_char}\n"
+        motd_content += border
 
-    banner = border + "\n"
-    for line in lines:
-        banner += f"#  \033[1;31m{line.ljust(max_len)}\033[0m  #\n"
-    banner += border
+        cmd = f'echo -e "{motd_content}" | sudo tee /etc/motd'
+    else:
+        MOTD_FILE_PATH = f"C:\\Users\\{user}\\motd.ps1"
+        NEW_BANNER_CONTENT = f"================\n{message}\n======================"  
+        bash_friendly_banner = NEW_BANNER_CONTENT.replace('"', '\\"')
+        cmd = f"echo \"{bash_friendly_banner}\" > {MOTD_FILE_PATH}"
 
-    # write message into /etc/motd
-    cmd = f'echo -e "{banner}" | sudo tee /etc/motd'
-    ssh.exec_command(cmd)
-    print("set up motd of {}".format(host))
+    stdin, stdout, stderr = ssh.exec_command(cmd)
+    stderr_output = stderr.read().decode().strip()
+    if stderr_output:
+        print(f"Error when write banner: {stderr_output}")
+    else:
+        print("finish remote setup for {}".format(host))
 
-    cmd = f"""
-    for tty in $(who | awk '{{print $2}}'); do
-        echo -e "\\033[1;31m{message}\\033[0m" > /dev/$tty
-    done
-    """
-    ssh.exec_command(cmd)
-    print("message broadcast to all login user of {}".format(host))
+    if os_type.lower() == 'linux':
+        cmd = f"""
+        for tty in $(who | awk '{{print $2}}'); do
+            echo -e "\\033[1;31m{message}\\033[0m" > /dev/$tty
+        done
+        """
+        ssh.exec_command(cmd)
+        print("message broadcast to all login user of {}".format(host))
     ssh.close()
-    
 
-def clear_remote_motd(host, user, password):
+def clear_remote_motd(host, user, keypath,os_type='linux'):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(host, username=user, password=password)
 
-    # clear /etc/motd
-    cmd = 'echo "" | sudo tee /etc/motd'
-    ssh.exec_command(cmd)
+    if os_type.lower() == 'windows':
+        MOTD_FILE_PATH = f"C:\\Users\\{user}\\ssh_motd.txt"
+    else:
+        MOTD_FILE_PATH = "/etc/motd"
+
+    private_key = paramiko.RSAKey.from_private_key_file(keypath)
+    ssh.connect(host, username=user, pkey=private_key)
+    if os_type.lower() == 'linux':
+        clear_cmd = f'sudo sh -c "echo > {MOTD_FILE_PATH}"'
+    else:
+        clear_cmd = f"echo \"\" > {MOTD_FILE_PATH}"
+    stdin, stdout, stderr = ssh.exec_command(clear_cmd)
+    stderr_output = stderr.read().decode().strip()
+    if stderr.read():
+        print(f"   - Error when clear motd of {host}: {stderr.read().decode().strip()}")
+            
     ssh.close()

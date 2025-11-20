@@ -39,3 +39,89 @@ spec:
           value: "builder"
         - name: LABEL_TASK
           value: "build-installer"
+        volumeMounts:
+        - name: secret-windows-1-brno
+          mountPath: "/opt/secret-windows-1-brno" 
+          readOnly: true
+        - name: secret-windows-1-blr
+          mountPath: "/opt/secret-windows-1-blr" 
+          readOnly: true
+        - name: secret-mac-1-brno
+          mountPath: "/opt/secret-mac-1-brno" 
+          readOnly: true
+        - name: secret-mac-2-brno
+          mountPath: "/opt/secret-mac-2-brno" 
+          readOnly: true
+        - name: secret-mac-1-blr
+          mountPath: "/opt/secret-mac-1-blr" 
+          readOnly: true
+        - name: secret-mac-3-brno
+          mountPath: "/opt/secret-mac-3-brno" 
+          readOnly: true
+        - name: secret-mac-4-brno
+          mountPath: "/opt/secret-mac-4-brno" 
+          readOnly: true
+        - name: secret-mac-5-brno
+          mountPath: "/opt/secret-mac-5-brno" 
+          readOnly: true
+        - name: secret-mac-6-brno
+          mountPath: "/opt/secret-mac-6-brno" 
+          readOnly: true
+        - name: secret-mac-7-brno
+          mountPath: "/opt/secret-mac-7-brno" 
+          readOnly: true
+        - name: secret-mac-8-brno
+          mountPath: "/opt/secret-mac-8-brno" 
+          readOnly: true
+        - name: secret-mac-9-brno
+          mountPath: "/opt/secret-mac-9-brno" 
+          readOnly: true
+        - name: secret-rhel-1-blr
+          mountPath: "/opt/secret-rhel-1-blr" 
+          readOnly: true
+        - name: secret-rhel-1-brno
+          mountPath: "/opt/secret-rhel-1-brno" 
+          readOnly: true
+      volumes:
+      - name: secret-windows-1-brno
+        secret:
+          secretName: secret-windows-1-brno
+      - name: secret-windows-1-blr
+        secret:
+          secretName: secret-windows-1-blr
+      - name: secret-mac-1-brno
+        secret:
+          secretName: secret-mac-1-brno
+      - name: secret-mac-2-brno
+        secret:
+          secretName: secret-mac-2-brno
+      - name: secret-mac-1-blr
+        secret:
+          secretName: secret-mac-1-blr
+      - name: secret-mac-3-brno
+        secret:
+          secretName: secret-mac-3-brno
+      - name: secret-mac-4-brno
+        secret:
+          secretName: secret-mac-4-brno
+      - name: secret-mac-5-brno
+        secret:
+          secretName: secret-mac-5-brno
+      - name: secret-mac-6-brno
+        secret:
+          secretName: secret-mac-6-brno
+      - name: secret-mac-7-brno
+        secret:
+          secretName: secret-mac-7-brno
+      - name: secret-mac-8-brno
+        secret:
+          secretName: secret-mac-8-brno
+      - name: secret-mac-9-brno
+        secret:
+          secretName: secret-mac-9-brno
+      - name: secret-rhel-1-blr
+        secret:
+          secretName: secret-rhel-1-blr
+      - name: secret-rhel-1-brno
+        secret:
+          secretName: secret-rhel-1-brno

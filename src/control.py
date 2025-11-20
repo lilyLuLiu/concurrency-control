@@ -110,8 +110,8 @@ def start_pending_run(run: str):
 
 def monitor_pending_run():
     pendings = get_pending_runs()
-    if len(pendings) > 0:
-        print("************** Monitor pending run **************")
+    print("************** Monitor pending run **************")
+        
     for pend in pendings:
         print(f"--- {pend} ---")
         use_second_machine = False
