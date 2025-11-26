@@ -32,24 +32,26 @@ def set_remote_motd(host, user, keypath, message, os_type='linux'):
     private_key = paramiko.RSAKey.from_private_key_file(keypath)
     ssh.connect(host, username=user, pkey=private_key)   
 
+    lines = message.splitlines()
+    max_len = max(len(line) for line in lines)
+    border_char = "#"
+    border = border_char * (max_len + 6) 
+    motd_content = border + "\n"
+    for line in lines:
+        if os_type.lower() == 'linux': 
+            colored_line = f"\033[1;31m{line.ljust(max_len)}\033[0m"
+        else:
+            colored_line = f"{line.ljust(max_len)}"
+        motd_content += f"{border_char}  {colored_line}  {border_char}\n"
+    motd_content += border
+
     if os_type.lower() == 'linux':
         MOTD_FILE_PATH = "/etc/motd"
-        
-        lines = message.splitlines()
-        max_len = max(len(line) for line in lines)
-        border_char = "#"
-        border = border_char * (max_len + 6) 
-        motd_content = border + "\n"
-        for line in lines:
-            colored_line = f"\033[1;31m{line.ljust(max_len)}\033[0m"
-            motd_content += f"{border_char}  {colored_line}  {border_char}\n"
-        motd_content += border
 
         cmd = f'echo -e "{motd_content}" | sudo tee /etc/motd'
     else:
-        MOTD_FILE_PATH = f"C:\\Users\\{user}\\motd.ps1"
-        NEW_BANNER_CONTENT = f"================\n{message}\n======================"  
-        bash_friendly_banner = NEW_BANNER_CONTENT.replace('"', '\\"')
+        MOTD_FILE_PATH = f"C:\\Users\\{user}\\ssh_motd.txt"
+        bash_friendly_banner = motd_content.replace('"', '\\"')
         cmd = f"echo \"{bash_friendly_banner}\" > {MOTD_FILE_PATH}"
 
     stdin, stdout, stderr = ssh.exec_command(cmd)
