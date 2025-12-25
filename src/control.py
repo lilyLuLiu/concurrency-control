@@ -34,8 +34,6 @@ def get_pending_runs():
         lines = out.splitlines()
         pendings = [line.split()[0] for line in lines] 
     else:
-        logger.info(out)
-        logger.info(err)
         logger.info("Not find any pending pipelinerun")
     return pendings
     
