@@ -4,6 +4,7 @@ import json
 import time 
 import inform
 from log import logger
+import configmap
 
 NAMESPACE = os.environ.get("NAMESPACE", "devtoolsqe--pipeline")
 TOKEN_PATH = os.environ.get("TOKEN_PATH")
@@ -13,9 +14,6 @@ LABEL_MACHINE_PR = os.environ.get("LABEL_MACHINE_PR", "tester")
 LAEBL_MACHINE_TASK = os.environ.get("LAEBL_MACHINE_TASK", "builder")
 LABEL_TASK = os.environ.get("LABEL_TASK","")
 
-
-WAIT_FINISH_RUNS = []
-WAIT_TASK_FINISH = []
 
 
 def set_project():
@@ -86,10 +84,10 @@ def check_run_finish(run: str):
 
 def monitor_runs_finish():
     new_wait_list = []
-    global WAIT_FINISH_RUNS
-    if len(WAIT_FINISH_RUNS) > 0:
+    wait_finish_run = configmap.get_wait_finish_runs()
+    if len(wait_finish_run) > 0:
         logger.info("************** Monitor pipelinerun finish **************")
-    for run,machine in WAIT_FINISH_RUNS:
+    for run,machine in wait_finish_run:
         logger.info(f"--- {run} ---")
         status = check_run_finish(run)
         if status == True:
@@ -99,22 +97,10 @@ def monitor_runs_finish():
         else:
             logger.info(f"pipelinerun {run} is still running, machine {machine} is busy")
             new_wait_list.append((run, machine))
-    WAIT_FINISH_RUNS = new_wait_list
+    configmap.update_wait_finish_run(new_wait_list)
+    logger.info("\nWAIT_FINISH_RUNS:")
+    logger.info(new_wait_list)
 
-def monitor_runs_finish1():
-    global WAIT_FINISH_RUNS
-    if len(WAIT_FINISH_RUNS) > 0:
-        logger.info("************** Monitor pipelinerun finish **************")
-    for run,machine in WAIT_FINISH_RUNS:
-        logger.info(f"--- {run} ---")
-        status = check_run_finish(run)
-        if status == True:
-            logger.info(f"pipelinerun {run} has finished, set {machine} to free")
-            change_machine_status(machine, "free")
-            inform.clean_inform_message(machine)
-            WAIT_FINISH_RUNS.remove((run, machine))
-        else:
-            logger.info(f"pipelinerun {run} is still running, machine {machine} is busy")
 
 def start_pending_run(run: str):
     cmd = "oc get pipelinerun {} -o json  | jq '.spec.status = \"\"' | oc apply -f -".format(run)
@@ -125,8 +111,8 @@ def start_pending_run(run: str):
         raise Exception("failed to start pipelinerun {}".format(run))  
 
 def monitor_pending_run():
-    pendings = get_pending_runs()
     logger.info("************** Monitor pending run **************")
+    pendings = get_pending_runs()
         
     for pend in pendings:
         logger.info(f"--- {pend} ---")
@@ -148,13 +134,13 @@ def monitor_pending_run():
             logger.info(f"machine {machine1} is available")
             inform.set_inform_message(machine1, pend)
             change_machine_status(machine1, "busy")
-            WAIT_FINISH_RUNS.append((pend, machine1))
+            configmap.append_wait_finish_run((pend,machine1))
 
             if use_second_machine:
                 logger.info(f"machine {machine2} is available")
                 inform.set_inform_message(machine2, pend)
                 change_machine_status(machine2, "busy")
-                WAIT_TASK_FINISH.append((pend, machine2))
+                configmap.append_wait_task((pend, machine2))
             
             logger.info(f"start pipelinerun {pend}")
             start_pending_run(pend)
@@ -184,10 +170,10 @@ def check_task_finish(pipelinerun: str, task_name: str):
 
 def monitor_task():
     new_wait_list = []
-    global WAIT_TASK_FINISH
-    if len(WAIT_TASK_FINISH) > 0:
+    wait_task_finish = configmap.get_wait_finish_task()
+    if len(wait_task_finish) > 0:
         logger.info("************** Monitor tasks **************")
-    for run, machine in WAIT_TASK_FINISH:
+    for run, machine in wait_task_finish:
         logger.info(f"--- {run} {machine} ---")
         status =  check_task_finish(run, LABEL_TASK)
         if status == True:
@@ -197,7 +183,9 @@ def monitor_task():
         else:
             logger.info(f"task {LABEL_TASK} of pipelinerun {run} is not finish, machine {machine} is busy")
             new_wait_list.append((run, machine))
-    WAIT_TASK_FINISH = new_wait_list
+    configmap.update_wait_finish_task(new_wait_list)
+    logger.info("\nWAIT_TASK_FINISH")
+    logger.info(new_wait_list)
 
 if __name__ == "__main__":
     set_project()
@@ -206,9 +194,5 @@ if __name__ == "__main__":
         monitor_task()
         monitor_pending_run()
         monitor_runs_finish()      
-        logger.info("\nWAIT_FINISH_RUNS:")
-        logger.info(WAIT_FINISH_RUNS)
-        logger.info("\nWAIT_TASK_FINISH")
-        logger.info(WAIT_TASK_FINISH)
         logger.info("\n\nsleep 1 minute\n")
         time.sleep(1*60)
