@@ -27,11 +27,15 @@ def clean_inform_message(machine:str):
     clear_remote_motd(host, user, keypath, os)
     
 def set_remote_motd(host, user, keypath, message, os_type='linux'):
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    private_key = paramiko.RSAKey.from_private_key_file(keypath)
-    ssh.connect(host, username=user, pkey=private_key)   
-
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        private_key = paramiko.RSAKey.from_private_key_file(keypath)
+        ssh.connect(host, username=user, pkey=private_key)   
+    except Exception as e:
+        print(f"Unexpected error ssh to {host}: {e}")
+        return
+    
     lines = message.splitlines()
     max_len = max(len(line) for line in lines)
     border_char = "#"
@@ -81,7 +85,13 @@ def clear_remote_motd(host, user, keypath,os_type='linux'):
         MOTD_FILE_PATH = "/etc/motd"
 
     private_key = paramiko.RSAKey.from_private_key_file(keypath)
-    ssh.connect(host, username=user, pkey=private_key)
+    
+    try:
+        ssh.connect(host, username=user, pkey=private_key)
+    except Exception as e:
+        print(f"Error clear motd for {host}: {e}")
+        return
+
     if os_type.lower() == 'linux':
         clear_cmd = f'sudo sh -c "echo > {MOTD_FILE_PATH}"'
     else:
