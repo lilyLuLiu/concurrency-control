@@ -27,6 +27,8 @@ spec:
         command: ["python3", "-u"]     
         args: ["/opt/control.py"] 
         env:
+        - name: KUBECONFIG
+          value: /kube/config
         - name: SERVER
           value: "https://api.gpc.ocp-hub.prod.psi.redhat.com:6443"
         - name: NAMESPACE
@@ -40,6 +42,9 @@ spec:
         - name: LABEL_TASK
           value: "build-installer"
         volumeMounts:
+        - name: kubeconfig
+          mountPath: /kube
+          readOnly: true
         - name: secret-windows-1-brno
           mountPath: "/opt/secret-windows-1-brno" 
           readOnly: true
@@ -83,6 +88,12 @@ spec:
           mountPath: "/opt/secret-rhel-1-brno" 
           readOnly: true
       volumes:
+      - name: kubeconfig
+        configMap:
+          name: kubeconfig-with-qps
+          items:
+          - key: config
+            path: config
       - name: secret-windows-1-brno
         secret:
           secretName: secret-windows-1-brno
