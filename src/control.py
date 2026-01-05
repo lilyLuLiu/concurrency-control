@@ -76,9 +76,10 @@ def check_run_finish(run: str):
         elif out == "\"False\"" or out == "\"True\"":
             return True
         else:
-            raise Exception("the status of run is {}".format(out))
+            logger.error("the status of run is {}".format(out))
     else:
-        raise Exception("failed to get the status of run {}".format(run))
+        logger.error("failed to get the status of run {}".format(run))
+        return True 
 
 def monitor_runs_finish():
     new_wait_list = []
@@ -106,7 +107,7 @@ def start_pending_run(run: str):
     if code == 0:
         logger.info(f"sucessfully start pipelinerun {run}")
     else:
-        raise Exception("failed to start pipelinerun {}".format(run))  
+        logger.error("failed to start pipelinerun {}".format(run))  
 
 def monitor_pending_run():
     logger.info("************** Monitor pending run **************")
@@ -190,7 +191,7 @@ if __name__ == "__main__":
     
     while True:
         monitor_task()
+        monitor_runs_finish() 
         monitor_pending_run()
-        monitor_runs_finish()      
         logger.info("\n\nsleep 1 minute\n")
         time.sleep(1*60)
