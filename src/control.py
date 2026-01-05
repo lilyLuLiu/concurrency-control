@@ -67,19 +67,29 @@ def change_machine_status(machine: str, status: str):
         return False
 
 def check_run_finish(run: str):
-    cmd = " oc get pipelinerun {} -o json | jq .status.conditions[0].status".format(run)
-    code, out, _ = runcmd.run_cmd(cmd)
-    if code==0 and out != "" :
-        out = out.strip()
-        if out == "\"Unknown\"":
-            return False
-        elif out == "\"False\"" or out == "\"True\"":
-            return True
-        else:
-            logger.error("the status of run is {}".format(out))
+    status = get_run_status(run)
+    if status in ("Succeeded", "Failed"):
+        return True
+    elif status == "Running":
+        return False
+    elif status == "Running(PipelineRunPending)":
+        start_pending_run(run)
+        return False
+    elif status == None:
+        logger.error(f"failed to get {run} status, set it as finish")
+        return True
     else:
-        logger.error("failed to get the status of run {}".format(run))
-        return True 
+        logger.error(f"unknow status of {run}: {status}")
+
+def get_run_status(run: str):
+    status = None
+    cmd = f"tkn pipelinerun list | grep {run}"
+    code, out, _ = runcmd.run_cmd(cmd)
+    if code==0 and out!="" :
+        status = out.split()[-1]
+    else:
+        logger.error(f"failed to get {run} status: {out}")
+    return status
 
 def monitor_runs_finish():
     new_wait_list = []
