@@ -13,6 +13,17 @@ spec:
         app: concurrency-control
     spec:
       serviceAccountName: ci-use
+      initContainers:
+      - name: init-log-dir
+        image: registry.access.redhat.com/ubi9/ubi-minimal
+        command:
+          - sh
+          - -c
+          - |
+            mkdir -p /var/log/app && chmod 775 /var/log/app
+        volumeMounts:
+        - name: log-volume
+          mountPath: /var/log/app
       containers:
       - name: control
         image: quay.io/crc-org/concurrency:v0.1
@@ -42,6 +53,8 @@ spec:
         - name: LABEL_TASK
           value: "build-installer"
         volumeMounts:
+        - name: log-volume
+          mountPath: /var/log/app
         - name: kubeconfig
           mountPath: /kube
           readOnly: true
@@ -88,6 +101,9 @@ spec:
           mountPath: "/opt/secret-rhel-1-brno" 
           readOnly: true
       volumes:
+      - name: log-volume
+        persistentVolumeClaim:
+          claimName: concurrency-log
       - name: kubeconfig
         configMap:
           name: kubeconfig-with-qps
