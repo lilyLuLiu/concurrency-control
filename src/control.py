@@ -75,11 +75,14 @@ def check_run_finish(run: str):
     elif status == "Running(PipelineRunPending)":
         start_pending_run(run)
         return False
+    elif "Failed" in status: 
+        return True
     elif status == None:
         logger.error(f"failed to get {run} status, set it as finish")
         return True
     else:
         logger.error(f"unknow status of {run}: {status}")
+        return True
 
 def get_run_status(run: str):
     status = None
