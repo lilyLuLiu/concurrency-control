@@ -75,7 +75,7 @@ def check_run_finish(run: str):
     elif status == "Running(PipelineRunPending)":
         start_pending_run(run)
         return False
-    elif "Failed" in status: 
+    elif "Failed" in (status or ""): 
         return True
     elif status == None:
         logger.error(f"failed to get {run} status, set it as finish")
@@ -177,8 +177,13 @@ def check_task_finish(pipelinerun: str, task_name: str):
         else:
             return False
     else:
-        logger.warning(f"task {task_name} in pipelineRun {pipelinerun} not find")
-        return False
+        logger.info(f"task {task_name} in pipelineRun {pipelinerun} not find")
+        if not check_run_finish(pipelinerun):
+            return False
+        else:
+            logger.error(f"pipelineRun {pipelinerun} as finished / not exist")
+            logger.error(f"set task {task_name} in pipelineRun {pipelinerun} as finished")
+            return True
 
 def monitor_task():
     new_wait_list = []
