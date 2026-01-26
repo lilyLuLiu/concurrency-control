@@ -174,6 +174,8 @@ def check_task_finish(pipelinerun: str, task_name: str):
         status = out.split()[1]
         if status == "True":
             return True
+        elif status == "False":
+            return True
         else:
             return False
     else:
