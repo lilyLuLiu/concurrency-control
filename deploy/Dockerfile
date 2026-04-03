@@ -10,7 +10,7 @@ RUN microdnf install -y openssh-clients sshpass zip bash jq python3 pip tar \
     && tar xzvf openshift-client-linux.tar.gz -C /usr/local/bin \
     && curl -kL ${TKN_URL} -o tkn.tar.gz \
     && tar xvzf tkn.tar.gz -C /usr/local/bin \
-    && pip install --no-cache-dir paramiko \
+    && pip install --no-cache-dir paramiko flask \
     && microdnf clean all \
     && chmod 777 -R /opt/
 

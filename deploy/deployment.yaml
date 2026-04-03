@@ -28,6 +28,8 @@ spec:
       - name: control
         image: quay.io/crc-org/concurrency:v0.1
         imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
         resources:
           requests:
             cpu: "250m"      
@@ -152,3 +154,16 @@ spec:
       - name: secret-rhel-1-brno
         secret:
           secretName: secret-rhel-1-brno
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: concurrency-control-service
+spec:
+  selector:
+    app: concurrency-control
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: NodePort
