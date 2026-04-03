@@ -17,7 +17,8 @@ def machine_status():
     statuses = configmap.get_all_machine_statuses()
     wait_finish_runs = configmap.get_wait_finish_runs()
     log_contents = get_log_contents()
-    return render_template('status.html', statuses=statuses, wait_finish_runs=wait_finish_runs, log_contents=log_contents)
+    project_name = app.config.get("PROJECT_NAME", "Unknown")
+    return render_template('status.html', statuses=statuses, wait_finish_runs=wait_finish_runs, log_contents=log_contents, project_name=project_name)
 
 @app.route('/log')
 def log_data():

@@ -210,6 +210,7 @@ if __name__ == "__main__":
     from web import app
     import threading
 
+    app.config["PROJECT_NAME"] = NAMESPACE
     web_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=80))
     web_thread.daemon = True
     web_thread.start()
