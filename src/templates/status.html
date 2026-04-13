@@ -16,30 +16,34 @@
                 <tr>
                     <th>Machine</th>
                     <th>Status</th>
+                    <th>PipelineRun</th>
                 </tr>
-                {% for machine, status in statuses.items() %}
+                {% for machine, info in machine_info.items() %}
                 <tr>
                     <td>{{ machine }}</td>
-                    <td>{{ status }}</td>
+                    <td>{{ info.status }}</td>
+                    <td>{{ info.run if info.run else '' }}</td>
                 </tr>
                 {% endfor %}
             </table>
         </div>
 
-        <div class="table-container">
-            <h2>Running Pipelines</h2>
-            <table border="1">
-                <tr>
-                    <th>Pipeline Run</th>
-                    <th>Machine</th>
-                </tr>
-                {% for run, machine in wait_finish_runs %}
-                <tr>
-                    <td>{{ run }}</td>
-                    <td>{{ machine }}</td>
-                </tr>
-                {% endfor %}
-            </table>
+        <div class="reservation-container">
+            <h2>Manage Machine</h2>
+            <form action="/manage_machine" method="post">
+                <label for="action">Action:</label>
+                <select id="action" name="action">
+                    <option value="reserve">Reserve</option>
+                    <option value="return">Return</option>
+                </select>
+                <label for="machine_name">Machine Name:</label>
+                <input type="text" id="machine_name" name="machine_name" required>
+                <div id="user_name_div">
+                    <label for="user_name">Your Name:</label>
+                    <input type="text" id="user_name" name="user_name" required>
+                </div>
+                <input type="submit" value="Submit">
+            </form>
         </div>
 
         <div class="log-container">
@@ -48,6 +52,21 @@
         </div>
     </div>
     <script>
+        function toggleUserName() {
+            const action = document.getElementById('action').value;
+            const userNameDiv = document.getElementById('user_name_div');
+            const userNameInput = document.getElementById('user_name');
+            if (action === 'return') {
+                userNameDiv.style.display = 'none';
+                userNameInput.required = false;
+            } else {
+                userNameDiv.style.display = 'block';
+                userNameInput.required = true;
+            }
+        }
+        document.getElementById('action').addEventListener('change', toggleUserName);
+        window.addEventListener('load', toggleUserName);
+
         var log = document.getElementById('log');
         log.scrollTop = log.scrollHeight;
 
